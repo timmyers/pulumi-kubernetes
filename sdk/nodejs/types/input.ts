@@ -5,6 +5,573 @@ import * as pulumi from "@pulumi/pulumi";
 import { Namespace } from "../core/v1/Namespace";
 
 export namespace admissionregistration {
+  export namespace v1 {
+    /**
+     * MutatingWebhook describes an admission webhook and the resources and operations it applies
+     * to.
+     */
+    export interface MutatingWebhook {
+      /**
+       * AdmissionReviewVersions is an ordered list of preferred `AdmissionReview` versions the
+       * Webhook expects. API server will try to use first version in the list which it supports. If
+       * none of the versions specified in this list supported by API server, validation will fail
+       * for this object. If a persisted webhook configuration specifies allowed versions and does
+       * not include any versions known to the API Server, calls to the webhook will fail and be
+       * subject to the failure policy.
+       */
+      admissionReviewVersions: pulumi.Input<pulumi.Input<string>[]>
+
+      /**
+       * ClientConfig defines how to communicate with the hook. Required
+       */
+      clientConfig: pulumi.Input<admissionregistration.v1.WebhookClientConfig>
+
+      /**
+       * The name of the admission webhook. Name should be fully qualified, e.g.,
+       * imagepolicy.kubernetes.io, where "imagepolicy" is the name of the webhook, and
+       * kubernetes.io is the name of the organization. Required.
+       */
+      name: pulumi.Input<string>
+
+      /**
+       * SideEffects states whether this webhook has side effects. Acceptable values are: None,
+       * NoneOnDryRun (webhooks created via v1beta1 may also specify Some or Unknown). Webhooks with
+       * side effects MUST implement a reconciliation system, since a request may be rejected by a
+       * future step in the admission change and the side effects therefore need to be undone.
+       * Requests with the dryRun attribute will be auto-rejected if they match a webhook with
+       * sideEffects == Unknown or Some.
+       */
+      sideEffects: pulumi.Input<string>
+
+      /**
+       * FailurePolicy defines how unrecognized errors from the admission endpoint are handled -
+       * allowed values are Ignore or Fail. Defaults to Fail.
+       */
+      failurePolicy?: pulumi.Input<string>
+
+      /**
+       * matchPolicy defines how the "rules" list is used to match incoming requests. Allowed values
+       * are "Exact" or "Equivalent".
+       * 
+       * - Exact: match a request only if it exactly matches a specified rule. For example, if
+       * deployments can be modified via apps/v1, apps/v1beta1, and extensions/v1beta1, but "rules"
+       * only included `apiGroups:["apps"], apiVersions:["v1"], resources: ["deployments"]`, a
+       * request to apps/v1beta1 or extensions/v1beta1 would not be sent to the webhook.
+       * 
+       * - Equivalent: match a request if modifies a resource listed in rules, even via another API
+       * group or version. For example, if deployments can be modified via apps/v1, apps/v1beta1,
+       * and extensions/v1beta1, and "rules" only included `apiGroups:["apps"], apiVersions:["v1"],
+       * resources: ["deployments"]`, a request to apps/v1beta1 or extensions/v1beta1 would be
+       * converted to apps/v1 and sent to the webhook.
+       * 
+       * Defaults to "Equivalent"
+       */
+      matchPolicy?: pulumi.Input<string>
+
+      /**
+       * NamespaceSelector decides whether to run the webhook on an object based on whether the
+       * namespace for that object matches the selector. If the object itself is a namespace, the
+       * matching is performed on object.metadata.labels. If the object is another cluster scoped
+       * resource, it never skips the webhook.
+       * 
+       * For example, to run the webhook on any objects whose namespace is not associated with
+       * "runlevel" of "0" or "1";  you will set the selector as follows: "namespaceSelector": {
+       *   "matchExpressions": [
+       *     {
+       *       "key": "runlevel",
+       *       "operator": "NotIn",
+       *       "values": [
+       *         "0",
+       *         "1"
+       *       ]
+       *     }
+       *   ]
+       * }
+       * 
+       * If instead you want to only run the webhook on any objects whose namespace is associated
+       * with the "environment" of "prod" or "staging"; you will set the selector as follows:
+       * "namespaceSelector": {
+       *   "matchExpressions": [
+       *     {
+       *       "key": "environment",
+       *       "operator": "In",
+       *       "values": [
+       *         "prod",
+       *         "staging"
+       *       ]
+       *     }
+       *   ]
+       * }
+       * 
+       * See https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/ for more
+       * examples of label selectors.
+       * 
+       * Default to the empty LabelSelector, which matches everything.
+       */
+      namespaceSelector?: pulumi.Input<meta.v1.LabelSelector>
+
+      /**
+       * ObjectSelector decides whether to run the webhook based on if the object has matching
+       * labels. objectSelector is evaluated against both the oldObject and newObject that would be
+       * sent to the webhook, and is considered to match if either object matches the selector. A
+       * null object (oldObject in the case of create, or newObject in the case of delete) or an
+       * object that cannot have labels (like a DeploymentRollback or a PodProxyOptions object) is
+       * not considered to match. Use the object selector only if the webhook is opt-in, because end
+       * users may skip the admission webhook by setting the labels. Default to the empty
+       * LabelSelector, which matches everything.
+       */
+      objectSelector?: pulumi.Input<meta.v1.LabelSelector>
+
+      /**
+       * reinvocationPolicy indicates whether this webhook should be called multiple times as part
+       * of a single admission evaluation. Allowed values are "Never" and "IfNeeded".
+       * 
+       * Never: the webhook will not be called more than once in a single admission evaluation.
+       * 
+       * IfNeeded: the webhook will be called at least one additional time as part of the admission
+       * evaluation if the object being admitted is modified by other admission plugins after the
+       * initial webhook call. Webhooks that specify this option *must* be idempotent, able to
+       * process objects they previously admitted. Note: * the number of additional invocations is
+       * not guaranteed to be exactly one. * if additional invocations result in further
+       * modifications to the object, webhooks are not guaranteed to be invoked again. * webhooks
+       * that use this option may be reordered to minimize the number of additional invocations. *
+       * to validate an object after all mutations are guaranteed complete, use a validating
+       * admission webhook instead.
+       * 
+       * Defaults to "Never".
+       */
+      reinvocationPolicy?: pulumi.Input<string>
+
+      /**
+       * Rules describes what operations on what resources/subresources the webhook cares about. The
+       * webhook cares about an operation if it matches _any_ Rule. However, in order to prevent
+       * ValidatingAdmissionWebhooks and MutatingAdmissionWebhooks from putting the cluster in a
+       * state which cannot be recovered from without completely disabling the plugin,
+       * ValidatingAdmissionWebhooks and MutatingAdmissionWebhooks are never called on admission
+       * requests for ValidatingWebhookConfiguration and MutatingWebhookConfiguration objects.
+       */
+      rules?: pulumi.Input<pulumi.Input<admissionregistration.v1.RuleWithOperations>[]>
+
+      /**
+       * TimeoutSeconds specifies the timeout for this webhook. After the timeout passes, the
+       * webhook call will be ignored or the API call will fail based on the failure policy. The
+       * timeout value must be between 1 and 30 seconds. Default to 10 seconds.
+       */
+      timeoutSeconds?: pulumi.Input<number>
+
+    }
+
+
+    /**
+     * MutatingWebhookConfiguration describes the configuration of and admission webhook that accept
+     * or reject and may change the object.
+     */
+    export interface MutatingWebhookConfiguration {
+      /**
+       * APIVersion defines the versioned schema of this representation of an object. Servers should
+       * convert recognized schemas to the latest internal value, and may reject unrecognized
+       * values. More info:
+       * https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+       */
+      apiVersion?: pulumi.Input<"admissionregistration.k8s.io/v1">
+
+      /**
+       * Kind is a string value representing the REST resource this object represents. Servers may
+       * infer this from the endpoint the client submits requests to. Cannot be updated. In
+       * CamelCase. More info:
+       * https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+       */
+      kind?: pulumi.Input<"MutatingWebhookConfiguration">
+
+      /**
+       * Standard object metadata; More info:
+       * https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata.
+       */
+      metadata?: pulumi.Input<meta.v1.ObjectMeta>
+
+      /**
+       * Webhooks is a list of webhooks and the affected resources and operations.
+       */
+      webhooks?: pulumi.Input<pulumi.Input<admissionregistration.v1.MutatingWebhook>[]>
+
+    }
+
+    export function isMutatingWebhookConfiguration(o: any): o is MutatingWebhookConfiguration {
+      return o.apiVersion == "admissionregistration.k8s.io/v1" && o.kind == "MutatingWebhookConfiguration";
+    }
+
+    /**
+     * MutatingWebhookConfigurationList is a list of MutatingWebhookConfiguration.
+     */
+    export interface MutatingWebhookConfigurationList {
+      /**
+       * List of MutatingWebhookConfiguration.
+       */
+      items: pulumi.Input<pulumi.Input<admissionregistration.v1.MutatingWebhookConfiguration>[]>
+
+      /**
+       * APIVersion defines the versioned schema of this representation of an object. Servers should
+       * convert recognized schemas to the latest internal value, and may reject unrecognized
+       * values. More info:
+       * https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+       */
+      apiVersion?: pulumi.Input<"admissionregistration.k8s.io/v1">
+
+      /**
+       * Kind is a string value representing the REST resource this object represents. Servers may
+       * infer this from the endpoint the client submits requests to. Cannot be updated. In
+       * CamelCase. More info:
+       * https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+       */
+      kind?: pulumi.Input<"MutatingWebhookConfigurationList">
+
+      /**
+       * Standard list metadata. More info:
+       * https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+       */
+      metadata?: pulumi.Input<meta.v1.ListMeta>
+
+    }
+
+    export function isMutatingWebhookConfigurationList(o: any): o is MutatingWebhookConfigurationList {
+      return o.apiVersion == "admissionregistration.k8s.io/v1" && o.kind == "MutatingWebhookConfigurationList";
+    }
+
+    /**
+     * RuleWithOperations is a tuple of Operations and Resources. It is recommended to make sure
+     * that all the tuple expansions are valid.
+     */
+    export interface RuleWithOperations {
+      /**
+       * APIGroups is the API groups the resources belong to. '*' is all groups. If '*' is present,
+       * the length of the slice must be one. Required.
+       */
+      apiGroups?: pulumi.Input<pulumi.Input<string>[]>
+
+      /**
+       * APIVersions is the API versions the resources belong to. '*' is all versions. If '*' is
+       * present, the length of the slice must be one. Required.
+       */
+      apiVersions?: pulumi.Input<pulumi.Input<string>[]>
+
+      /**
+       * Operations is the operations the admission hook cares about - CREATE, UPDATE, or * for all
+       * operations. If '*' is present, the length of the slice must be one. Required.
+       */
+      operations?: pulumi.Input<pulumi.Input<string>[]>
+
+      /**
+       * Resources is a list of resources this rule applies to.
+       * 
+       * For example: 'pods' means pods. 'pods/log' means the log subresource of pods. '*' means all
+       * resources, but not subresources. 'pods/*' means all subresources of pods. '*&#8205;/scale'
+       * means all scale subresources. '*&#8205;/*' means all resources and their subresources.
+       * 
+       * If wildcard is present, the validation rule will ensure resources do not overlap with each
+       * other.
+       * 
+       * Depending on the enclosing object, subresources might not be allowed. Required.
+       */
+      resources?: pulumi.Input<pulumi.Input<string>[]>
+
+      /**
+       * scope specifies the scope of this rule. Valid values are "Cluster", "Namespaced", and "*"
+       * "Cluster" means that only cluster-scoped resources will match this rule. Namespace API
+       * objects are cluster-scoped. "Namespaced" means that only namespaced resources will match
+       * this rule. "*" means that there are no scope restrictions. Subresources match the scope of
+       * their parent resource. Default is "*".
+       */
+      scope?: pulumi.Input<string>
+
+    }
+
+
+    /**
+     * ServiceReference holds a reference to Service.legacy.k8s.io
+     */
+    export interface ServiceReference {
+      /**
+       * `name` is the name of the service. Required
+       */
+      name: pulumi.Input<string>
+
+      /**
+       * `namespace` is the namespace of the service. Required
+       */
+      namespace: pulumi.Input<string>
+
+      /**
+       * `path` is an optional URL path which will be sent in any request to this service.
+       */
+      path?: pulumi.Input<string>
+
+      /**
+       * If specified, the port on the service that hosting webhook. Default to 443 for backward
+       * compatibility. `port` should be a valid port number (1-65535, inclusive).
+       */
+      port?: pulumi.Input<number>
+
+    }
+
+
+    /**
+     * ValidatingWebhook describes an admission webhook and the resources and operations it applies
+     * to.
+     */
+    export interface ValidatingWebhook {
+      /**
+       * AdmissionReviewVersions is an ordered list of preferred `AdmissionReview` versions the
+       * Webhook expects. API server will try to use first version in the list which it supports. If
+       * none of the versions specified in this list supported by API server, validation will fail
+       * for this object. If a persisted webhook configuration specifies allowed versions and does
+       * not include any versions known to the API Server, calls to the webhook will fail and be
+       * subject to the failure policy.
+       */
+      admissionReviewVersions: pulumi.Input<pulumi.Input<string>[]>
+
+      /**
+       * ClientConfig defines how to communicate with the hook. Required
+       */
+      clientConfig: pulumi.Input<admissionregistration.v1.WebhookClientConfig>
+
+      /**
+       * The name of the admission webhook. Name should be fully qualified, e.g.,
+       * imagepolicy.kubernetes.io, where "imagepolicy" is the name of the webhook, and
+       * kubernetes.io is the name of the organization. Required.
+       */
+      name: pulumi.Input<string>
+
+      /**
+       * SideEffects states whether this webhook has side effects. Acceptable values are: None,
+       * NoneOnDryRun (webhooks created via v1beta1 may also specify Some or Unknown). Webhooks with
+       * side effects MUST implement a reconciliation system, since a request may be rejected by a
+       * future step in the admission change and the side effects therefore need to be undone.
+       * Requests with the dryRun attribute will be auto-rejected if they match a webhook with
+       * sideEffects == Unknown or Some.
+       */
+      sideEffects: pulumi.Input<string>
+
+      /**
+       * FailurePolicy defines how unrecognized errors from the admission endpoint are handled -
+       * allowed values are Ignore or Fail. Defaults to Fail.
+       */
+      failurePolicy?: pulumi.Input<string>
+
+      /**
+       * matchPolicy defines how the "rules" list is used to match incoming requests. Allowed values
+       * are "Exact" or "Equivalent".
+       * 
+       * - Exact: match a request only if it exactly matches a specified rule. For example, if
+       * deployments can be modified via apps/v1, apps/v1beta1, and extensions/v1beta1, but "rules"
+       * only included `apiGroups:["apps"], apiVersions:["v1"], resources: ["deployments"]`, a
+       * request to apps/v1beta1 or extensions/v1beta1 would not be sent to the webhook.
+       * 
+       * - Equivalent: match a request if modifies a resource listed in rules, even via another API
+       * group or version. For example, if deployments can be modified via apps/v1, apps/v1beta1,
+       * and extensions/v1beta1, and "rules" only included `apiGroups:["apps"], apiVersions:["v1"],
+       * resources: ["deployments"]`, a request to apps/v1beta1 or extensions/v1beta1 would be
+       * converted to apps/v1 and sent to the webhook.
+       * 
+       * Defaults to "Equivalent"
+       */
+      matchPolicy?: pulumi.Input<string>
+
+      /**
+       * NamespaceSelector decides whether to run the webhook on an object based on whether the
+       * namespace for that object matches the selector. If the object itself is a namespace, the
+       * matching is performed on object.metadata.labels. If the object is another cluster scoped
+       * resource, it never skips the webhook.
+       * 
+       * For example, to run the webhook on any objects whose namespace is not associated with
+       * "runlevel" of "0" or "1";  you will set the selector as follows: "namespaceSelector": {
+       *   "matchExpressions": [
+       *     {
+       *       "key": "runlevel",
+       *       "operator": "NotIn",
+       *       "values": [
+       *         "0",
+       *         "1"
+       *       ]
+       *     }
+       *   ]
+       * }
+       * 
+       * If instead you want to only run the webhook on any objects whose namespace is associated
+       * with the "environment" of "prod" or "staging"; you will set the selector as follows:
+       * "namespaceSelector": {
+       *   "matchExpressions": [
+       *     {
+       *       "key": "environment",
+       *       "operator": "In",
+       *       "values": [
+       *         "prod",
+       *         "staging"
+       *       ]
+       *     }
+       *   ]
+       * }
+       * 
+       * See https://kubernetes.io/docs/concepts/overview/working-with-objects/labels for more
+       * examples of label selectors.
+       * 
+       * Default to the empty LabelSelector, which matches everything.
+       */
+      namespaceSelector?: pulumi.Input<meta.v1.LabelSelector>
+
+      /**
+       * ObjectSelector decides whether to run the webhook based on if the object has matching
+       * labels. objectSelector is evaluated against both the oldObject and newObject that would be
+       * sent to the webhook, and is considered to match if either object matches the selector. A
+       * null object (oldObject in the case of create, or newObject in the case of delete) or an
+       * object that cannot have labels (like a DeploymentRollback or a PodProxyOptions object) is
+       * not considered to match. Use the object selector only if the webhook is opt-in, because end
+       * users may skip the admission webhook by setting the labels. Default to the empty
+       * LabelSelector, which matches everything.
+       */
+      objectSelector?: pulumi.Input<meta.v1.LabelSelector>
+
+      /**
+       * Rules describes what operations on what resources/subresources the webhook cares about. The
+       * webhook cares about an operation if it matches _any_ Rule. However, in order to prevent
+       * ValidatingAdmissionWebhooks and MutatingAdmissionWebhooks from putting the cluster in a
+       * state which cannot be recovered from without completely disabling the plugin,
+       * ValidatingAdmissionWebhooks and MutatingAdmissionWebhooks are never called on admission
+       * requests for ValidatingWebhookConfiguration and MutatingWebhookConfiguration objects.
+       */
+      rules?: pulumi.Input<pulumi.Input<admissionregistration.v1.RuleWithOperations>[]>
+
+      /**
+       * TimeoutSeconds specifies the timeout for this webhook. After the timeout passes, the
+       * webhook call will be ignored or the API call will fail based on the failure policy. The
+       * timeout value must be between 1 and 30 seconds. Default to 10 seconds.
+       */
+      timeoutSeconds?: pulumi.Input<number>
+
+    }
+
+
+    /**
+     * ValidatingWebhookConfiguration describes the configuration of and admission webhook that
+     * accept or reject and object without changing it.
+     */
+    export interface ValidatingWebhookConfiguration {
+      /**
+       * APIVersion defines the versioned schema of this representation of an object. Servers should
+       * convert recognized schemas to the latest internal value, and may reject unrecognized
+       * values. More info:
+       * https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+       */
+      apiVersion?: pulumi.Input<"admissionregistration.k8s.io/v1">
+
+      /**
+       * Kind is a string value representing the REST resource this object represents. Servers may
+       * infer this from the endpoint the client submits requests to. Cannot be updated. In
+       * CamelCase. More info:
+       * https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+       */
+      kind?: pulumi.Input<"ValidatingWebhookConfiguration">
+
+      /**
+       * Standard object metadata; More info:
+       * https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata.
+       */
+      metadata?: pulumi.Input<meta.v1.ObjectMeta>
+
+      /**
+       * Webhooks is a list of webhooks and the affected resources and operations.
+       */
+      webhooks?: pulumi.Input<pulumi.Input<admissionregistration.v1.ValidatingWebhook>[]>
+
+    }
+
+    export function isValidatingWebhookConfiguration(o: any): o is ValidatingWebhookConfiguration {
+      return o.apiVersion == "admissionregistration.k8s.io/v1" && o.kind == "ValidatingWebhookConfiguration";
+    }
+
+    /**
+     * ValidatingWebhookConfigurationList is a list of ValidatingWebhookConfiguration.
+     */
+    export interface ValidatingWebhookConfigurationList {
+      /**
+       * List of ValidatingWebhookConfiguration.
+       */
+      items: pulumi.Input<pulumi.Input<admissionregistration.v1.ValidatingWebhookConfiguration>[]>
+
+      /**
+       * APIVersion defines the versioned schema of this representation of an object. Servers should
+       * convert recognized schemas to the latest internal value, and may reject unrecognized
+       * values. More info:
+       * https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+       */
+      apiVersion?: pulumi.Input<"admissionregistration.k8s.io/v1">
+
+      /**
+       * Kind is a string value representing the REST resource this object represents. Servers may
+       * infer this from the endpoint the client submits requests to. Cannot be updated. In
+       * CamelCase. More info:
+       * https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+       */
+      kind?: pulumi.Input<"ValidatingWebhookConfigurationList">
+
+      /**
+       * Standard list metadata. More info:
+       * https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+       */
+      metadata?: pulumi.Input<meta.v1.ListMeta>
+
+    }
+
+    export function isValidatingWebhookConfigurationList(o: any): o is ValidatingWebhookConfigurationList {
+      return o.apiVersion == "admissionregistration.k8s.io/v1" && o.kind == "ValidatingWebhookConfigurationList";
+    }
+
+    /**
+     * WebhookClientConfig contains the information to make a TLS connection with the webhook
+     */
+    export interface WebhookClientConfig {
+      /**
+       * `caBundle` is a PEM encoded CA bundle which will be used to validate the webhook's server
+       * certificate. If unspecified, system trust roots on the apiserver are used.
+       */
+      caBundle?: pulumi.Input<string>
+
+      /**
+       * `service` is a reference to the service for this webhook. Either `service` or `url` must be
+       * specified.
+       * 
+       * If the webhook is running within the cluster, then you should use `service`.
+       */
+      service?: pulumi.Input<admissionregistration.v1.ServiceReference>
+
+      /**
+       * `url` gives the location of the webhook, in standard URL form (`scheme://host:port/path`).
+       * Exactly one of `url` or `service` must be specified.
+       * 
+       * The `host` should not refer to a service running in the cluster; use the `service` field
+       * instead. The host might be resolved via external DNS in some apiservers (e.g.,
+       * `kube-apiserver` cannot resolve in-cluster DNS as that would be a layering violation).
+       * `host` may also be an IP address.
+       * 
+       * Please note that using `localhost` or `127.0.0.1` as a `host` is risky unless you take
+       * great care to run this webhook on all hosts which run an apiserver which might need to make
+       * calls to this webhook. Such installs are likely to be non-portable, i.e., not easy to turn
+       * up in a new cluster.
+       * 
+       * The scheme must be "https"; the URL must begin with "https://".
+       * 
+       * A path is optional, and if present may be any string permissible in a URL. You may use the
+       * path to pass an arbitrary string to the webhook, for example, a cluster identifier.
+       * 
+       * Attempting to use a user or basic auth e.g. "user:password@" is not allowed. Fragments
+       * ("#...") and query parameters ("?...") are not allowed, either.
+       */
+      url?: pulumi.Input<string>
+
+    }
+
+
+  }
+
   export namespace v1beta1 {
     /**
      * MutatingWebhook describes an admission webhook and the resources and operations it applies
@@ -4847,6 +5414,116 @@ export namespace auditregistration {
 export namespace authentication {
   export namespace v1 {
     /**
+     * BoundObjectReference is a reference to an object that a token is bound to.
+     */
+    export interface BoundObjectReference {
+      /**
+       * API version of the referent.
+       */
+      apiVersion?: pulumi.Input<string>
+
+      /**
+       * Kind of the referent. Valid kinds are 'Pod' and 'Secret'.
+       */
+      kind?: pulumi.Input<string>
+
+      /**
+       * Name of the referent.
+       */
+      name?: pulumi.Input<string>
+
+      /**
+       * UID of the referent.
+       */
+      uid?: pulumi.Input<string>
+
+    }
+
+    export function isBoundObjectReference(o: any): o is BoundObjectReference {
+      return o.apiVersion == "authentication/v1" && o.kind == "BoundObjectReference";
+    }
+
+    /**
+     * TokenRequest requests a token for a given service account.
+     */
+    export interface TokenRequest {
+      
+      spec: pulumi.Input<authentication.v1.TokenRequestSpec>
+
+      /**
+       * APIVersion defines the versioned schema of this representation of an object. Servers should
+       * convert recognized schemas to the latest internal value, and may reject unrecognized
+       * values. More info:
+       * https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+       */
+      apiVersion?: pulumi.Input<"authentication.k8s.io/v1">
+
+      /**
+       * Kind is a string value representing the REST resource this object represents. Servers may
+       * infer this from the endpoint the client submits requests to. Cannot be updated. In
+       * CamelCase. More info:
+       * https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+       */
+      kind?: pulumi.Input<"TokenRequest">
+
+      
+      metadata?: pulumi.Input<meta.v1.ObjectMeta>
+
+    }
+
+    export function isTokenRequest(o: any): o is TokenRequest {
+      return o.apiVersion == "authentication.k8s.io/v1" && o.kind == "TokenRequest";
+    }
+
+    /**
+     * TokenRequestSpec contains client provided parameters of a token request.
+     */
+    export interface TokenRequestSpec {
+      /**
+       * Audiences are the intendend audiences of the token. A recipient of a token must identitfy
+       * themself with an identifier in the list of audiences of the token, and otherwise should
+       * reject the token. A token issued for multiple audiences may be used to authenticate against
+       * any of the audiences listed but implies a high degree of trust between the target
+       * audiences.
+       */
+      audiences: pulumi.Input<pulumi.Input<string>[]>
+
+      /**
+       * BoundObjectRef is a reference to an object that the token will be bound to. The token will
+       * only be valid for as long as the bound object exists. NOTE: The API server's TokenReview
+       * endpoint will validate the BoundObjectRef, but other audiences may not. Keep
+       * ExpirationSeconds small if you want prompt revocation.
+       */
+      boundObjectRef?: pulumi.Input<authentication.v1.BoundObjectReference>
+
+      /**
+       * ExpirationSeconds is the requested duration of validity of the request. The token issuer
+       * may return a token with a different validity duration so a client needs to check the
+       * 'expiration' field in a response.
+       */
+      expirationSeconds?: pulumi.Input<number>
+
+    }
+
+
+    /**
+     * TokenRequestStatus is the result of a token request.
+     */
+    export interface TokenRequestStatus {
+      /**
+       * ExpirationTimestamp is the time of expiration of the returned token.
+       */
+      expirationTimestamp: pulumi.Input<string>
+
+      /**
+       * Token is the opaque bearer token.
+       */
+      token: pulumi.Input<string>
+
+    }
+
+
+    /**
      * TokenReview attempts to authenticate a token to a known user. Note: TokenReview requests may
      * be cached by the webhook token authenticator plugin in the kube-apiserver.
      */
@@ -6026,7 +6703,10 @@ export namespace autoscaling {
       scaleTargetRef: pulumi.Input<autoscaling.v1.CrossVersionObjectReference>
 
       /**
-       * lower limit for the number of pods that can be set by the autoscaler, default 1.
+       * minReplicas is the lower limit for the number of replicas to which the autoscaler can scale
+       * down.  It defaults to 1 pod.  minReplicas is allowed to be 0 if the alpha feature gate
+       * HPAScaleToZero is enabled and at least one Object or External metric is configured.
+       * Scaling is active as long as at least one metric value is available.
        */
       minReplicas?: pulumi.Input<number>
 
@@ -6370,7 +7050,9 @@ export namespace autoscaling {
 
       /**
        * minReplicas is the lower limit for the number of replicas to which the autoscaler can scale
-       * down. It defaults to 1 pod.
+       * down.  It defaults to 1 pod.  minReplicas is allowed to be 0 if the alpha feature gate
+       * HPAScaleToZero is enabled and at least one Object or External metric is configured.
+       * Scaling is active as long as at least one metric value is available.
        */
       minReplicas?: pulumi.Input<number>
 
@@ -6898,7 +7580,9 @@ export namespace autoscaling {
 
       /**
        * minReplicas is the lower limit for the number of replicas to which the autoscaler can scale
-       * down. It defaults to 1 pod.
+       * down.  It defaults to 1 pod.  minReplicas is allowed to be 0 if the alpha feature gate
+       * HPAScaleToZero is enabled and at least one Object or External metric is configured.
+       * Scaling is active as long as at least one metric value is available.
        */
       minReplicas?: pulumi.Input<number>
 
@@ -8514,7 +9198,7 @@ export namespace core {
     export interface CephFSPersistentVolumeSource {
       /**
        * Required: Monitors is a collection of Ceph monitors More info:
-       * https://releases.k8s.io/HEAD/examples/volumes/cephfs/README.md#how-to-use-it
+       * https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it
        */
       monitors: pulumi.Input<pulumi.Input<string>[]>
 
@@ -8525,26 +9209,25 @@ export namespace core {
 
       /**
        * Optional: Defaults to false (read/write). ReadOnly here will force the ReadOnly setting in
-       * VolumeMounts. More info:
-       * https://releases.k8s.io/HEAD/examples/volumes/cephfs/README.md#how-to-use-it
+       * VolumeMounts. More info: https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it
        */
       readOnly?: pulumi.Input<boolean>
 
       /**
        * Optional: SecretFile is the path to key ring for User, default is /etc/ceph/user.secret
-       * More info: https://releases.k8s.io/HEAD/examples/volumes/cephfs/README.md#how-to-use-it
+       * More info: https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it
        */
       secretFile?: pulumi.Input<string>
 
       /**
        * Optional: SecretRef is reference to the authentication secret for User, default is empty.
-       * More info: https://releases.k8s.io/HEAD/examples/volumes/cephfs/README.md#how-to-use-it
+       * More info: https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it
        */
       secretRef?: pulumi.Input<core.v1.SecretReference>
 
       /**
        * Optional: User is the rados user name, default is admin More info:
-       * https://releases.k8s.io/HEAD/examples/volumes/cephfs/README.md#how-to-use-it
+       * https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it
        */
       user?: pulumi.Input<string>
 
@@ -8558,7 +9241,7 @@ export namespace core {
     export interface CephFSVolumeSource {
       /**
        * Required: Monitors is a collection of Ceph monitors More info:
-       * https://releases.k8s.io/HEAD/examples/volumes/cephfs/README.md#how-to-use-it
+       * https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it
        */
       monitors: pulumi.Input<pulumi.Input<string>[]>
 
@@ -8569,26 +9252,25 @@ export namespace core {
 
       /**
        * Optional: Defaults to false (read/write). ReadOnly here will force the ReadOnly setting in
-       * VolumeMounts. More info:
-       * https://releases.k8s.io/HEAD/examples/volumes/cephfs/README.md#how-to-use-it
+       * VolumeMounts. More info: https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it
        */
       readOnly?: pulumi.Input<boolean>
 
       /**
        * Optional: SecretFile is the path to key ring for User, default is /etc/ceph/user.secret
-       * More info: https://releases.k8s.io/HEAD/examples/volumes/cephfs/README.md#how-to-use-it
+       * More info: https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it
        */
       secretFile?: pulumi.Input<string>
 
       /**
        * Optional: SecretRef is reference to the authentication secret for User, default is empty.
-       * More info: https://releases.k8s.io/HEAD/examples/volumes/cephfs/README.md#how-to-use-it
+       * More info: https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it
        */
       secretRef?: pulumi.Input<core.v1.LocalObjectReference>
 
       /**
        * Optional: User is the rados user name, default is admin More info:
-       * https://releases.k8s.io/HEAD/examples/volumes/cephfs/README.md#how-to-use-it
+       * https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it
        */
       user?: pulumi.Input<string>
 
@@ -8602,21 +9284,21 @@ export namespace core {
      */
     export interface CinderPersistentVolumeSource {
       /**
-       * volume id used to identify the volume in cinder More info:
-       * https://releases.k8s.io/HEAD/examples/mysql-cinder-pd/README.md
+       * volume id used to identify the volume in cinder. More info:
+       * https://examples.k8s.io/mysql-cinder-pd/README.md
        */
       volumeID: pulumi.Input<string>
 
       /**
        * Filesystem type to mount. Must be a filesystem type supported by the host operating system.
        * Examples: "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified. More
-       * info: https://releases.k8s.io/HEAD/examples/mysql-cinder-pd/README.md
+       * info: https://examples.k8s.io/mysql-cinder-pd/README.md
        */
       fsType?: pulumi.Input<string>
 
       /**
        * Optional: Defaults to false (read/write). ReadOnly here will force the ReadOnly setting in
-       * VolumeMounts. More info: https://releases.k8s.io/HEAD/examples/mysql-cinder-pd/README.md
+       * VolumeMounts. More info: https://examples.k8s.io/mysql-cinder-pd/README.md
        */
       readOnly?: pulumi.Input<boolean>
 
@@ -8635,21 +9317,21 @@ export namespace core {
      */
     export interface CinderVolumeSource {
       /**
-       * volume id used to identify the volume in cinder More info:
-       * https://releases.k8s.io/HEAD/examples/mysql-cinder-pd/README.md
+       * volume id used to identify the volume in cinder. More info:
+       * https://examples.k8s.io/mysql-cinder-pd/README.md
        */
       volumeID: pulumi.Input<string>
 
       /**
        * Filesystem type to mount. Must be a filesystem type supported by the host operating system.
        * Examples: "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified. More
-       * info: https://releases.k8s.io/HEAD/examples/mysql-cinder-pd/README.md
+       * info: https://examples.k8s.io/mysql-cinder-pd/README.md
        */
       fsType?: pulumi.Input<string>
 
       /**
        * Optional: Defaults to false (read/write). ReadOnly here will force the ReadOnly setting in
-       * VolumeMounts. More info: https://releases.k8s.io/HEAD/examples/mysql-cinder-pd/README.md
+       * VolumeMounts. More info: https://examples.k8s.io/mysql-cinder-pd/README.md
        */
       readOnly?: pulumi.Input<boolean>
 
@@ -9739,6 +10421,173 @@ export namespace core {
 
 
     /**
+     * An EphemeralContainer is a special type of container which doesn't come with any resource or
+     * scheduling guarantees but can be added to a pod that has already been created. They are
+     * intended for user-initiated activities such as troubleshooting a running pod. Ephemeral
+     * containers will not be restarted when they exit, and they will be killed if the pod is
+     * removed or restarted. If an ephemeral container causes a pod to exceed its resource
+     * allocation, the pod may be evicted. Ephemeral containers are added via a pod's
+     * ephemeralcontainers subresource and will appear in the pod spec once added. No fields in
+     * EphemeralContainer may be changed once added. This is an alpha feature enabled by the
+     * EphemeralContainers feature flag.
+     */
+    export interface EphemeralContainer {
+      /**
+       * Name of the ephemeral container specified as a DNS_LABEL. This name must be unique among
+       * all containers, init containers and ephemeral containers.
+       */
+      name: pulumi.Input<string>
+
+      /**
+       * Arguments to the entrypoint. The docker image's CMD is used if this is not provided.
+       * Variable references $(VAR_NAME) are expanded using the container's environment. If a
+       * variable cannot be resolved, the reference in the input string will be unchanged. The
+       * $(VAR_NAME) syntax can be escaped with a double $$, ie: $$(VAR_NAME). Escaped references
+       * will never be expanded, regardless of whether the variable exists or not. Cannot be
+       * updated. More info:
+       * https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell
+       */
+      args?: pulumi.Input<pulumi.Input<string>[]>
+
+      /**
+       * Entrypoint array. Not executed within a shell. The docker image's ENTRYPOINT is used if
+       * this is not provided. Variable references $(VAR_NAME) are expanded using the container's
+       * environment. If a variable cannot be resolved, the reference in the input string will be
+       * unchanged. The $(VAR_NAME) syntax can be escaped with a double $$, ie: $$(VAR_NAME).
+       * Escaped references will never be expanded, regardless of whether the variable exists or
+       * not. Cannot be updated. More info:
+       * https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell
+       */
+      command?: pulumi.Input<pulumi.Input<string>[]>
+
+      /**
+       * List of environment variables to set in the container. Cannot be updated.
+       */
+      env?: pulumi.Input<pulumi.Input<core.v1.EnvVar>[]>
+
+      /**
+       * List of sources to populate environment variables in the container. The keys defined within
+       * a source must be a C_IDENTIFIER. All invalid keys will be reported as an event when the
+       * container is starting. When a key exists in multiple sources, the value associated with the
+       * last source will take precedence. Values defined by an Env with a duplicate key will take
+       * precedence. Cannot be updated.
+       */
+      envFrom?: pulumi.Input<pulumi.Input<core.v1.EnvFromSource>[]>
+
+      /**
+       * Docker image name. More info: https://kubernetes.io/docs/concepts/containers/images
+       */
+      image?: pulumi.Input<string>
+
+      /**
+       * Image pull policy. One of Always, Never, IfNotPresent. Defaults to Always if :latest tag is
+       * specified, or IfNotPresent otherwise. Cannot be updated. More info:
+       * https://kubernetes.io/docs/concepts/containers/images#updating-images
+       */
+      imagePullPolicy?: pulumi.Input<string>
+
+      /**
+       * Lifecycle is not allowed for ephemeral containers.
+       */
+      lifecycle?: pulumi.Input<core.v1.Lifecycle>
+
+      /**
+       * Probes are not allowed for ephemeral containers.
+       */
+      livenessProbe?: pulumi.Input<core.v1.Probe>
+
+      /**
+       * Ports are not allowed for ephemeral containers.
+       */
+      ports?: pulumi.Input<pulumi.Input<core.v1.ContainerPort>[]>
+
+      /**
+       * Probes are not allowed for ephemeral containers.
+       */
+      readinessProbe?: pulumi.Input<core.v1.Probe>
+
+      /**
+       * Resources are not allowed for ephemeral containers. Ephemeral containers use spare
+       * resources already allocated to the pod.
+       */
+      resources?: pulumi.Input<core.v1.ResourceRequirements>
+
+      /**
+       * SecurityContext is not allowed for ephemeral containers.
+       */
+      securityContext?: pulumi.Input<core.v1.SecurityContext>
+
+      /**
+       * Whether this container should allocate a buffer for stdin in the container runtime. If this
+       * is not set, reads from stdin in the container will always result in EOF. Default is false.
+       */
+      stdin?: pulumi.Input<boolean>
+
+      /**
+       * Whether the container runtime should close the stdin channel after it has been opened by a
+       * single attach. When stdin is true the stdin stream will remain open across multiple attach
+       * sessions. If stdinOnce is set to true, stdin is opened on container start, is empty until
+       * the first client attaches to stdin, and then remains open and accepts data until the client
+       * disconnects, at which time stdin is closed and remains closed until the container is
+       * restarted. If this flag is false, a container processes that reads from stdin will never
+       * receive an EOF. Default is false
+       */
+      stdinOnce?: pulumi.Input<boolean>
+
+      /**
+       * If set, the name of the container from PodSpec that this ephemeral container targets. The
+       * ephemeral container will be run in the namespaces (IPC, PID, etc) of this container. If not
+       * set then the ephemeral container is run in whatever namespaces are shared for the pod. Note
+       * that the container runtime must support this feature.
+       */
+      targetContainerName?: pulumi.Input<string>
+
+      /**
+       * Optional: Path at which the file to which the container's termination message will be
+       * written is mounted into the container's filesystem. Message written is intended to be brief
+       * final status, such as an assertion failure message. Will be truncated by the node if
+       * greater than 4096 bytes. The total message length across all containers will be limited to
+       * 12kb. Defaults to /dev/termination-log. Cannot be updated.
+       */
+      terminationMessagePath?: pulumi.Input<string>
+
+      /**
+       * Indicate how the termination message should be populated. File will use the contents of
+       * terminationMessagePath to populate the container status message on both success and
+       * failure. FallbackToLogsOnError will use the last chunk of container log output if the
+       * termination message file is empty and the container exited with an error. The log output is
+       * limited to 2048 bytes or 80 lines, whichever is smaller. Defaults to File. Cannot be
+       * updated.
+       */
+      terminationMessagePolicy?: pulumi.Input<string>
+
+      /**
+       * Whether this container should allocate a TTY for itself, also requires 'stdin' to be true.
+       * Default is false.
+       */
+      tty?: pulumi.Input<boolean>
+
+      /**
+       * volumeDevices is the list of block devices to be used by the container. This is a beta
+       * feature.
+       */
+      volumeDevices?: pulumi.Input<pulumi.Input<core.v1.VolumeDevice>[]>
+
+      /**
+       * Pod volumes to mount into the container's filesystem. Cannot be updated.
+       */
+      volumeMounts?: pulumi.Input<pulumi.Input<core.v1.VolumeMount>[]>
+
+      /**
+       * Container's working directory. If not specified, the container runtime's default will be
+       * used, which might be configured in the container image. Cannot be updated.
+       */
+      workingDir?: pulumi.Input<string>
+
+    }
+
+
+    /**
      * Event is a report of an event somewhere in the cluster.
      */
     export interface Event {
@@ -10139,27 +10988,27 @@ export namespace core {
     export interface GlusterfsPersistentVolumeSource {
       /**
        * EndpointsName is the endpoint name that details Glusterfs topology. More info:
-       * https://releases.k8s.io/HEAD/examples/volumes/glusterfs/README.md#create-a-pod
+       * https://examples.k8s.io/volumes/glusterfs/README.md#create-a-pod
        */
       endpoints: pulumi.Input<string>
 
       /**
        * Path is the Glusterfs volume path. More info:
-       * https://releases.k8s.io/HEAD/examples/volumes/glusterfs/README.md#create-a-pod
+       * https://examples.k8s.io/volumes/glusterfs/README.md#create-a-pod
        */
       path: pulumi.Input<string>
 
       /**
        * EndpointsNamespace is the namespace that contains Glusterfs endpoint. If this field is
        * empty, the EndpointNamespace defaults to the same namespace as the bound PVC. More info:
-       * https://releases.k8s.io/HEAD/examples/volumes/glusterfs/README.md#create-a-pod
+       * https://examples.k8s.io/volumes/glusterfs/README.md#create-a-pod
        */
       endpointsNamespace?: pulumi.Input<string>
 
       /**
        * ReadOnly here will force the Glusterfs volume to be mounted with read-only permissions.
        * Defaults to false. More info:
-       * https://releases.k8s.io/HEAD/examples/volumes/glusterfs/README.md#create-a-pod
+       * https://examples.k8s.io/volumes/glusterfs/README.md#create-a-pod
        */
       readOnly?: pulumi.Input<boolean>
 
@@ -10173,20 +11022,20 @@ export namespace core {
     export interface GlusterfsVolumeSource {
       /**
        * EndpointsName is the endpoint name that details Glusterfs topology. More info:
-       * https://releases.k8s.io/HEAD/examples/volumes/glusterfs/README.md#create-a-pod
+       * https://examples.k8s.io/volumes/glusterfs/README.md#create-a-pod
        */
       endpoints: pulumi.Input<string>
 
       /**
        * Path is the Glusterfs volume path. More info:
-       * https://releases.k8s.io/HEAD/examples/volumes/glusterfs/README.md#create-a-pod
+       * https://examples.k8s.io/volumes/glusterfs/README.md#create-a-pod
        */
       path: pulumi.Input<string>
 
       /**
        * ReadOnly here will force the Glusterfs volume to be mounted with read-only permissions.
        * Defaults to false. More info:
-       * https://releases.k8s.io/HEAD/examples/volumes/glusterfs/README.md#create-a-pod
+       * https://examples.k8s.io/volumes/glusterfs/README.md#create-a-pod
        */
       readOnly?: pulumi.Input<boolean>
 
@@ -11140,6 +11989,13 @@ export namespace core {
       podCIDR?: pulumi.Input<string>
 
       /**
+       * podCIDRs represents the IP ranges assigned to the node for usage by Pods on that node. If
+       * this field is specified, the 0th entry must match the podCIDR field. It may contain at most
+       * 1 value for each of IPv4 and IPv6.
+       */
+      podCIDRs?: pulumi.Input<pulumi.Input<string>[]>
+
+      /**
        * ID of the node assigned by the cloud provider in the format:
        * <ProviderName>://<ProviderSpecificNodeID>
        */
@@ -11165,7 +12021,10 @@ export namespace core {
     export interface NodeStatus {
       /**
        * List of addresses reachable to the node. Queried from cloud provider, if available. More
-       * info: https://kubernetes.io/docs/concepts/nodes/node/#addresses
+       * info: https://kubernetes.io/docs/concepts/nodes/node/#addresses Note: This field is
+       * declared as mergeable, but the merge key is not sufficiently unique, which can cause data
+       * corruption when it is merged. Callers should instead use a full-replacement patch. See
+       * http://pr.k8s.io/79391 for an example.
        */
       addresses?: pulumi.Input<pulumi.Input<core.v1.NodeAddress>[]>
 
@@ -11697,8 +12556,8 @@ export namespace core {
       cephfs?: pulumi.Input<core.v1.CephFSPersistentVolumeSource>
 
       /**
-       * Cinder represents a cinder volume attached and mounted on kubelets host machine More info:
-       * https://releases.k8s.io/HEAD/examples/mysql-cinder-pd/README.md
+       * Cinder represents a cinder volume attached and mounted on kubelets host machine. More info:
+       * https://examples.k8s.io/mysql-cinder-pd/README.md
        */
       cinder?: pulumi.Input<core.v1.CinderPersistentVolumeSource>
 
@@ -11742,8 +12601,7 @@ export namespace core {
 
       /**
        * Glusterfs represents a Glusterfs volume that is attached to a host and exposed to the pod.
-       * Provisioned by an admin. More info:
-       * https://releases.k8s.io/HEAD/examples/volumes/glusterfs/README.md
+       * Provisioned by an admin. More info: https://examples.k8s.io/volumes/glusterfs/README.md
        */
       glusterfs?: pulumi.Input<core.v1.GlusterfsPersistentVolumeSource>
 
@@ -11812,7 +12670,7 @@ export namespace core {
 
       /**
        * RBD represents a Rados Block Device mount on the host that shares a pod's lifetime. More
-       * info: https://releases.k8s.io/HEAD/examples/volumes/rbd/README.md
+       * info: https://examples.k8s.io/volumes/rbd/README.md
        */
       rbd?: pulumi.Input<core.v1.RBDPersistentVolumeSource>
 
@@ -11829,8 +12687,7 @@ export namespace core {
 
       /**
        * StorageOS represents a StorageOS volume that is attached to the kubelet's host machine and
-       * mounted into the pod More info:
-       * https://releases.k8s.io/HEAD/examples/volumes/storageos/README.md
+       * mounted into the pod More info: https://examples.k8s.io/volumes/storageos/README.md
        */
       storageos?: pulumi.Input<core.v1.StorageOSPersistentVolumeSource>
 
@@ -12099,6 +12956,19 @@ export namespace core {
 
 
     /**
+     * IP address information for entries in the (plural) PodIPs field. Each entry includes:
+     *    IP: An IP address allocated to the pod. Routable at least within the cluster.
+     */
+    export interface PodIP {
+      /**
+       * ip is an IP address (IPv4 or IPv6) assigned to the pod
+       */
+      ip?: pulumi.Input<string>
+
+    }
+
+
+    /**
      * PodList is a list of Pods.
      */
     export interface PodList {
@@ -12210,7 +13080,9 @@ export namespace core {
       sysctls?: pulumi.Input<pulumi.Input<core.v1.Sysctl>[]>
 
       /**
-       * Windows security options.
+       * The Windows specific settings applied to all containers. If unspecified, the options within
+       * a container's SecurityContext will be used. If set in both SecurityContext and
+       * PodSecurityContext, the value specified in SecurityContext takes precedence.
        */
       windowsOptions?: pulumi.Input<core.v1.WindowsSecurityContextOptions>
 
@@ -12266,6 +13138,17 @@ export namespace core {
        * true.
        */
       enableServiceLinks?: pulumi.Input<boolean>
+
+      /**
+       * EphemeralContainers is the list of ephemeral containers that run in this pod. Ephemeral
+       * containers are added to an existing pod as a result of a user-initiated action such as
+       * troubleshooting. This list is read-only in the pod spec. It may not be specified in a
+       * create or modified in an update of a pod or pod template. To add an ephemeral container use
+       * the pod's ephemeralcontainers subresource, which allows update using the
+       * EphemeralContainers kind. This field is alpha-level and is only honored by servers that
+       * enable the EphemeralContainers feature.
+       */
+      ephemeralContainers?: pulumi.Input<pulumi.Input<core.v1.EphemeralContainer>[]>
 
       /**
        * HostAliases is an optional list of hosts and IPs that will be injected into the pod's hosts
@@ -12331,6 +13214,20 @@ export namespace core {
        * https://kubernetes.io/docs/concepts/configuration/assign-pod-node/
        */
       nodeSelector?: pulumi.Input<{[key: string]: pulumi.Input<string>}>
+
+      /**
+       * Overhead represents the resource overhead associated with running a pod for a given
+       * RuntimeClass. This field will be autopopulated at admission time by the RuntimeClass
+       * admission controller. If the RuntimeClass admission controller is enabled, overhead must
+       * not be set in Pod create requests. The RuntimeClass admission controller will reject Pod
+       * create requests which have the overhead already set. If RuntimeClass is configured and
+       * selected in the PodSpec, Overhead will be set to the value defined in the corresponding
+       * RuntimeClass, otherwise it will remain unset and treated as zero. More info:
+       * https://git.k8s.io/enhancements/keps/sig-node/20190226-pod-overhead.md This field is
+       * alpha-level as of Kubernetes v1.16, and is only honored by servers that enable the
+       * PodOverhead feature.
+       */
+      overhead?: pulumi.Input<object>
 
       /**
        * PreemptionPolicy is the Policy for preempting pods with lower priority. One of Never,
@@ -12438,6 +13335,14 @@ export namespace core {
       tolerations?: pulumi.Input<pulumi.Input<core.v1.Toleration>[]>
 
       /**
+       * TopologySpreadConstraints describes how a group of pods ought to spread across topology
+       * domains. Scheduler will schedule pods in a way which abides by the constraints. This field
+       * is alpha-level and is only honored by clusters that enables the EvenPodsSpread feature. All
+       * topologySpreadConstraints are ANDed.
+       */
+      topologySpreadConstraints?: pulumi.Input<pulumi.Input<core.v1.TopologySpreadConstraint>[]>
+
+      /**
        * List of volumes that can be mounted by containers belonging to the pod. More info:
        * https://kubernetes.io/docs/concepts/storage/volumes
        */
@@ -12463,6 +13368,12 @@ export namespace core {
        * https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#pod-and-container-status
        */
       containerStatuses?: pulumi.Input<pulumi.Input<core.v1.ContainerStatus>[]>
+
+      /**
+       * Status for any ephemeral containers that running in this pod. This field is alpha-level and
+       * is only honored by servers that enable the EphemeralContainers feature.
+       */
+      ephemeralContainerStatuses?: pulumi.Input<pulumi.Input<core.v1.ContainerStatus>[]>
 
       /**
        * IP address of the host to which the pod is assigned. Empty if not yet scheduled.
@@ -12518,6 +13429,13 @@ export namespace core {
        * allocated.
        */
       podIP?: pulumi.Input<string>
+
+      /**
+       * podIPs holds the IP addresses allocated to the pod. If this field is specified, the 0th
+       * entry must match the podIP field. Pods may be allocated at most 1 value for each of IPv4
+       * and IPv6. This list is empty if no IPs have been allocated yet.
+       */
+      podIPs?: pulumi.Input<pulumi.Input<core.v1.PodIP>[]>
 
       /**
        * The Quality of Service (QOS) classification assigned to the pod based on resource
@@ -12800,13 +13718,13 @@ export namespace core {
     export interface RBDPersistentVolumeSource {
       /**
        * The rados image name. More info:
-       * https://releases.k8s.io/HEAD/examples/volumes/rbd/README.md#how-to-use-it
+       * https://examples.k8s.io/volumes/rbd/README.md#how-to-use-it
        */
       image: pulumi.Input<string>
 
       /**
        * A collection of Ceph monitors. More info:
-       * https://releases.k8s.io/HEAD/examples/volumes/rbd/README.md#how-to-use-it
+       * https://examples.k8s.io/volumes/rbd/README.md#how-to-use-it
        */
       monitors: pulumi.Input<pulumi.Input<string>[]>
 
@@ -12820,32 +13738,31 @@ export namespace core {
 
       /**
        * Keyring is the path to key ring for RBDUser. Default is /etc/ceph/keyring. More info:
-       * https://releases.k8s.io/HEAD/examples/volumes/rbd/README.md#how-to-use-it
+       * https://examples.k8s.io/volumes/rbd/README.md#how-to-use-it
        */
       keyring?: pulumi.Input<string>
 
       /**
        * The rados pool name. Default is rbd. More info:
-       * https://releases.k8s.io/HEAD/examples/volumes/rbd/README.md#how-to-use-it
+       * https://examples.k8s.io/volumes/rbd/README.md#how-to-use-it
        */
       pool?: pulumi.Input<string>
 
       /**
        * ReadOnly here will force the ReadOnly setting in VolumeMounts. Defaults to false. More
-       * info: https://releases.k8s.io/HEAD/examples/volumes/rbd/README.md#how-to-use-it
+       * info: https://examples.k8s.io/volumes/rbd/README.md#how-to-use-it
        */
       readOnly?: pulumi.Input<boolean>
 
       /**
        * SecretRef is name of the authentication secret for RBDUser. If provided overrides keyring.
-       * Default is nil. More info:
-       * https://releases.k8s.io/HEAD/examples/volumes/rbd/README.md#how-to-use-it
+       * Default is nil. More info: https://examples.k8s.io/volumes/rbd/README.md#how-to-use-it
        */
       secretRef?: pulumi.Input<core.v1.SecretReference>
 
       /**
        * The rados user name. Default is admin. More info:
-       * https://releases.k8s.io/HEAD/examples/volumes/rbd/README.md#how-to-use-it
+       * https://examples.k8s.io/volumes/rbd/README.md#how-to-use-it
        */
       user?: pulumi.Input<string>
 
@@ -12859,13 +13776,13 @@ export namespace core {
     export interface RBDVolumeSource {
       /**
        * The rados image name. More info:
-       * https://releases.k8s.io/HEAD/examples/volumes/rbd/README.md#how-to-use-it
+       * https://examples.k8s.io/volumes/rbd/README.md#how-to-use-it
        */
       image: pulumi.Input<string>
 
       /**
        * A collection of Ceph monitors. More info:
-       * https://releases.k8s.io/HEAD/examples/volumes/rbd/README.md#how-to-use-it
+       * https://examples.k8s.io/volumes/rbd/README.md#how-to-use-it
        */
       monitors: pulumi.Input<pulumi.Input<string>[]>
 
@@ -12879,32 +13796,31 @@ export namespace core {
 
       /**
        * Keyring is the path to key ring for RBDUser. Default is /etc/ceph/keyring. More info:
-       * https://releases.k8s.io/HEAD/examples/volumes/rbd/README.md#how-to-use-it
+       * https://examples.k8s.io/volumes/rbd/README.md#how-to-use-it
        */
       keyring?: pulumi.Input<string>
 
       /**
        * The rados pool name. Default is rbd. More info:
-       * https://releases.k8s.io/HEAD/examples/volumes/rbd/README.md#how-to-use-it
+       * https://examples.k8s.io/volumes/rbd/README.md#how-to-use-it
        */
       pool?: pulumi.Input<string>
 
       /**
        * ReadOnly here will force the ReadOnly setting in VolumeMounts. Defaults to false. More
-       * info: https://releases.k8s.io/HEAD/examples/volumes/rbd/README.md#how-to-use-it
+       * info: https://examples.k8s.io/volumes/rbd/README.md#how-to-use-it
        */
       readOnly?: pulumi.Input<boolean>
 
       /**
        * SecretRef is name of the authentication secret for RBDUser. If provided overrides keyring.
-       * Default is nil. More info:
-       * https://releases.k8s.io/HEAD/examples/volumes/rbd/README.md#how-to-use-it
+       * Default is nil. More info: https://examples.k8s.io/volumes/rbd/README.md#how-to-use-it
        */
       secretRef?: pulumi.Input<core.v1.LocalObjectReference>
 
       /**
        * The rados user name. Default is admin. More info:
-       * https://releases.k8s.io/HEAD/examples/volumes/rbd/README.md#how-to-use-it
+       * https://examples.k8s.io/volumes/rbd/README.md#how-to-use-it
        */
       user?: pulumi.Input<string>
 
@@ -13750,7 +14666,9 @@ export namespace core {
       seLinuxOptions?: pulumi.Input<core.v1.SELinuxOptions>
 
       /**
-       * Windows security options.
+       * The Windows specific settings applied to all containers. If unspecified, the options from
+       * the PodSecurityContext will be used. If set in both SecurityContext and PodSecurityContext,
+       * the value specified in SecurityContext takes precedence.
        */
       windowsOptions?: pulumi.Input<core.v1.WindowsSecurityContextOptions>
 
@@ -14361,6 +15279,51 @@ export namespace core {
 
 
     /**
+     * TopologySpreadConstraint specifies how to spread matching pods among the given topology.
+     */
+    export interface TopologySpreadConstraint {
+      /**
+       * MaxSkew describes the degree to which pods may be unevenly distributed. It's the maximum
+       * permitted difference between the number of matching pods in any two topology domains of a
+       * given topology type. For example, in a 3-zone cluster, MaxSkew is set to 1, and pods with
+       * the same labelSelector spread as 1/1/0: | zone1 | zone2 | zone3 | |   P   |   P   |       |
+       * - if MaxSkew is 1, incoming pod can only be scheduled to zone3 to become 1/1/1; scheduling
+       * it onto zone1(zone2) would make the ActualSkew(2-0) on zone1(zone2) violate MaxSkew(1). -
+       * if MaxSkew is 2, incoming pod can be scheduled onto any zone. It's a required field.
+       * Default value is 1 and 0 is not allowed.
+       */
+      maxSkew: pulumi.Input<number>
+
+      /**
+       * TopologyKey is the key of node labels. Nodes that have a label with this key and identical
+       * values are considered to be in the same topology. We consider each <key, value> as a
+       * "bucket", and try to put balanced number of pods into each bucket. It's a required field.
+       */
+      topologyKey: pulumi.Input<string>
+
+      /**
+       * WhenUnsatisfiable indicates how to deal with a pod if it doesn't satisfy the spread
+       * constraint. - DoNotSchedule (default) tells the scheduler not to schedule it -
+       * ScheduleAnyway tells the scheduler to still schedule it It's considered as "Unsatisfiable"
+       * if and only if placing incoming pod on any topology violates "MaxSkew". For example, in a
+       * 3-zone cluster, MaxSkew is set to 1, and pods with the same labelSelector spread as 3/1/1:
+       * | zone1 | zone2 | zone3 | | P P P |   P   |   P   | If WhenUnsatisfiable is set to
+       * DoNotSchedule, incoming pod can only be scheduled to zone2(zone3) to become 3/2/1(3/1/2) as
+       * ActualSkew(2-1) on zone2(zone3) satisfies MaxSkew(1). In other words, the cluster can still
+       * be imbalanced, but scheduler won't make it *more* imbalanced. It's a required field.
+       */
+      whenUnsatisfiable: pulumi.Input<string>
+
+      /**
+       * LabelSelector is used to find matching pods. Pods that match this label selector are
+       * counted to determine the number of pods in their corresponding topology domain.
+       */
+      labelSelector?: pulumi.Input<meta.v1.LabelSelector>
+
+    }
+
+
+    /**
      * TypedLocalObjectReference contains enough information to let you locate the typed referenced
      * object inside the same namespace.
      */
@@ -14418,8 +15381,8 @@ export namespace core {
       cephfs?: pulumi.Input<core.v1.CephFSVolumeSource>
 
       /**
-       * Cinder represents a cinder volume attached and mounted on kubelets host machine More info:
-       * https://releases.k8s.io/HEAD/examples/mysql-cinder-pd/README.md
+       * Cinder represents a cinder volume attached and mounted on kubelets host machine. More info:
+       * https://examples.k8s.io/mysql-cinder-pd/README.md
        */
       cinder?: pulumi.Input<core.v1.CinderVolumeSource>
 
@@ -14480,7 +15443,7 @@ export namespace core {
 
       /**
        * Glusterfs represents a Glusterfs mount on the host that shares a pod's lifetime. More info:
-       * https://releases.k8s.io/HEAD/examples/volumes/glusterfs/README.md
+       * https://examples.k8s.io/volumes/glusterfs/README.md
        */
       glusterfs?: pulumi.Input<core.v1.GlusterfsVolumeSource>
 
@@ -14494,8 +15457,7 @@ export namespace core {
 
       /**
        * ISCSI represents an ISCSI Disk resource that is attached to a kubelet's host machine and
-       * then exposed to the pod. More info:
-       * https://releases.k8s.io/HEAD/examples/volumes/iscsi/README.md
+       * then exposed to the pod. More info: https://examples.k8s.io/volumes/iscsi/README.md
        */
       iscsi?: pulumi.Input<core.v1.ISCSIVolumeSource>
 
@@ -14535,7 +15497,7 @@ export namespace core {
 
       /**
        * RBD represents a Rados Block Device mount on the host that shares a pod's lifetime. More
-       * info: https://releases.k8s.io/HEAD/examples/volumes/rbd/README.md
+       * info: https://examples.k8s.io/volumes/rbd/README.md
        */
       rbd?: pulumi.Input<core.v1.RBDVolumeSource>
 
@@ -14725,6 +15687,15 @@ export namespace core {
        * alpha-level and is only honored by servers that enable the WindowsGMSA feature flag.
        */
       gmsaCredentialSpecName?: pulumi.Input<string>
+
+      /**
+       * The UserName in Windows to run the entrypoint of the container process. Defaults to the
+       * user specified in image metadata if unspecified. May also be set in PodSecurityContext. If
+       * set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext
+       * takes precedence. This field is alpha-level and it is only honored by servers that enable
+       * the WindowsRunAsUserName feature flag.
+       */
+      runAsUserName?: pulumi.Input<string>
 
     }
 
@@ -15853,7 +16824,7 @@ export namespace extensions {
        * List of sources which should be able to access the pods selected for this rule. Items in
        * this list are combined using a logical OR operation. If this field is empty or missing,
        * this rule matches all sources (traffic not restricted by source). If this field is present
-       * and contains at least on item, this rule allows traffic only if the traffic matches at
+       * and contains at least one item, this rule allows traffic only if the traffic matches at
        * least one item in the from list.
        */
       from?: pulumi.Input<pulumi.Input<extensions.v1beta1.NetworkPolicyPeer>[]>
@@ -17003,39 +17974,6 @@ export namespace meta {
 
 
     /**
-     * Initializer is information about an initializer that has not yet completed.
-     */
-    export interface Initializer {
-      /**
-       * name of the process that is responsible for initializing this object.
-       */
-      name: pulumi.Input<string>
-
-    }
-
-
-    /**
-     * Initializers tracks the progress of initialization.
-     */
-    export interface Initializers {
-      /**
-       * Pending is a list of initializers that must execute in order before this object is visible.
-       * When the last pending initializer is removed, and no failing result is set, the
-       * initializers struct will be set to nil and the object is considered as initialized and
-       * visible to all clients.
-       */
-      pending: pulumi.Input<pulumi.Input<meta.v1.Initializer>[]>
-
-      /**
-       * If result is set with the Failure field, the object will be persisted to storage and then
-       * deleted, ensuring that other clients can observe the deletion.
-       */
-      result?: pulumi.Input<meta.v1.Status>
-
-    }
-
-
-    /**
      * A label selector is a label query over a set of resources. The result of matchLabels and
      * matchExpressions are ANDed. An empty label selector matches all objects. A null label
      * selector matches no objects.
@@ -17122,6 +18060,9 @@ export namespace meta {
 
       /**
        * selfLink is a URL representing this object. Populated by the system. Read-only.
+       * 
+       * DEPRECATED Kubernetes will stop propagating this field in 1.20 release and the field is
+       * planned to be removed in 1.21 release.
        */
       selfLink?: pulumi.Input<string>
 
@@ -17257,21 +18198,6 @@ export namespace meta {
       generation?: pulumi.Input<number>
 
       /**
-       * An initializer is a controller which enforces some system invariant at object creation
-       * time. This field is a list of initializers that have not yet acted on this object. If nil
-       * or empty, this object has been completely initialized. Otherwise, the object is considered
-       * uninitialized and is hidden (in list/watch and get calls) from clients that haven't
-       * explicitly asked to observe uninitialized objects.
-       * 
-       * When an object is created, the system will populate this list with the current set of
-       * initializers. Only privileged users may set or modify this list. Once it is empty, it may
-       * not be modified further by any user.
-       * 
-       * DEPRECATED - initializers are an alpha field and will be removed in v1.15.
-       */
-      initializers?: pulumi.Input<meta.v1.Initializers>
-
-      /**
        * Map of string keys and values that can be used to organize and categorize (scope and
        * select) objects. May match selectors of replication controllers and services. More info:
        * http://kubernetes.io/docs/user-guide/labels
@@ -17332,6 +18258,9 @@ export namespace meta {
 
       /**
        * SelfLink is a URL representing this object. Populated by the system. Read-only.
+       * 
+       * DEPRECATED Kubernetes will stop propagating this field in 1.20 release and the field is
+       * planned to be removed in 1.21 release.
        */
       selfLink?: pulumi.Input<string>
 
@@ -17682,7 +18611,7 @@ export namespace networking {
        * List of sources which should be able to access the pods selected for this rule. Items in
        * this list are combined using a logical OR operation. If this field is empty or missing,
        * this rule matches all sources (traffic not restricted by source). If this field is present
-       * and contains at least on item, this rule allows traffic only if the traffic matches at
+       * and contains at least one item, this rule allows traffic only if the traffic matches at
        * least one item in the from list.
        */
       from?: pulumi.Input<pulumi.Input<networking.v1.NetworkPolicyPeer>[]>
@@ -18067,6 +18996,18 @@ export namespace networking {
 export namespace node {
   export namespace v1alpha1 {
     /**
+     * Overhead structure represents the resource overhead associated with running a pod.
+     */
+    export interface Overhead {
+      /**
+       * PodFixed represents the fixed resource overhead associated with running a pod.
+       */
+      podFixed?: pulumi.Input<object>
+
+    }
+
+
+    /**
      * RuntimeClass defines a class of container runtime supported in the cluster. The RuntimeClass
      * is used to determine which container runtime is used to run all containers in a pod.
      * RuntimeClasses are (currently) manually defined by a user or cluster provisioner, and
@@ -18164,12 +19105,62 @@ export namespace node {
        */
       runtimeHandler: pulumi.Input<string>
 
+      /**
+       * Overhead represents the resource overhead associated with running a pod for a given
+       * RuntimeClass. For more details, see
+       * https://git.k8s.io/enhancements/keps/sig-node/20190226-pod-overhead.md This field is
+       * alpha-level as of Kubernetes v1.15, and is only honored by servers that enable the
+       * PodOverhead feature.
+       */
+      overhead?: pulumi.Input<node.v1alpha1.Overhead>
+
+      /**
+       * Scheduling holds the scheduling constraints to ensure that pods running with this
+       * RuntimeClass are scheduled to nodes that support it. If scheduling is nil, this
+       * RuntimeClass is assumed to be supported by all nodes.
+       */
+      scheduling?: pulumi.Input<node.v1alpha1.Scheduling>
+
+    }
+
+
+    /**
+     * Scheduling specifies the scheduling constraints for nodes supporting a RuntimeClass.
+     */
+    export interface Scheduling {
+      /**
+       * nodeSelector lists labels that must be present on nodes that support this RuntimeClass.
+       * Pods using this RuntimeClass can only be scheduled to a node matched by this selector. The
+       * RuntimeClass nodeSelector is merged with a pod's existing nodeSelector. Any conflicts will
+       * cause the pod to be rejected in admission.
+       */
+      nodeSelector?: pulumi.Input<{[key: string]: pulumi.Input<string>}>
+
+      /**
+       * tolerations are appended (excluding duplicates) to pods running with this RuntimeClass
+       * during admission, effectively unioning the set of nodes tolerated by the pod and the
+       * RuntimeClass.
+       */
+      tolerations?: pulumi.Input<pulumi.Input<core.v1.Toleration>[]>
+
     }
 
 
   }
 
   export namespace v1beta1 {
+    /**
+     * Overhead structure represents the resource overhead associated with running a pod.
+     */
+    export interface Overhead {
+      /**
+       * PodFixed represents the fixed resource overhead associated with running a pod.
+       */
+      podFixed?: pulumi.Input<object>
+
+    }
+
+
     /**
      * RuntimeClass defines a class of container runtime supported in the cluster. The RuntimeClass
      * is used to determine which container runtime is used to run all containers in a pod.
@@ -18211,6 +19202,22 @@ export namespace node {
        * https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
        */
       metadata?: pulumi.Input<meta.v1.ObjectMeta>
+
+      /**
+       * Overhead represents the resource overhead associated with running a pod for a given
+       * RuntimeClass. For more details, see
+       * https://git.k8s.io/enhancements/keps/sig-node/20190226-pod-overhead.md This field is
+       * alpha-level as of Kubernetes v1.15, and is only honored by servers that enable the
+       * PodOverhead feature.
+       */
+      overhead?: pulumi.Input<node.v1beta1.Overhead>
+
+      /**
+       * Scheduling holds the scheduling constraints to ensure that pods running with this
+       * RuntimeClass are scheduled to nodes that support it. If scheduling is nil, this
+       * RuntimeClass is assumed to be supported by all nodes.
+       */
+      scheduling?: pulumi.Input<node.v1beta1.Scheduling>
 
     }
 
@@ -18254,6 +19261,28 @@ export namespace node {
     export function isRuntimeClassList(o: any): o is RuntimeClassList {
       return o.apiVersion == "node.k8s.io/v1beta1" && o.kind == "RuntimeClassList";
     }
+
+    /**
+     * Scheduling specifies the scheduling constraints for nodes supporting a RuntimeClass.
+     */
+    export interface Scheduling {
+      /**
+       * nodeSelector lists labels that must be present on nodes that support this RuntimeClass.
+       * Pods using this RuntimeClass can only be scheduled to a node matched by this selector. The
+       * RuntimeClass nodeSelector is merged with a pod's existing nodeSelector. Any conflicts will
+       * cause the pod to be rejected in admission.
+       */
+      nodeSelector?: pulumi.Input<{[key: string]: pulumi.Input<string>}>
+
+      /**
+       * tolerations are appended (excluding duplicates) to pods running with this RuntimeClass
+       * during admission, effectively unioning the set of nodes tolerated by the pod and the
+       * RuntimeClass.
+       */
+      tolerations?: pulumi.Input<pulumi.Input<core.v1.Toleration>[]>
+
+    }
+
 
   }
 
@@ -21331,6 +22360,11 @@ export namespace storage {
       nodeID: pulumi.Input<string>
 
       /**
+       * allocatable represents the volume resources of a node that are available for scheduling.
+       */
+      allocatable?: pulumi.Input<storage.v1beta1.VolumeNodeResources>
+
+      /**
        * topologyKeys is the list of keys supported by the driver. When a driver is initialized on a
        * cluster, it provides a set of topology keys that it understands (e.g. "company.com/zone",
        * "company.com/region"). When a driver is initialized on a node, it provides the same
@@ -21682,6 +22716,22 @@ export namespace storage {
        * Time the error was encountered.
        */
       time?: pulumi.Input<string>
+
+    }
+
+
+    /**
+     * VolumeNodeResources is a set of resource limits for scheduling of volumes.
+     */
+    export interface VolumeNodeResources {
+      /**
+       * Maximum number of unique volumes managed by the CSI driver that can be used on a node. A
+       * volume that is both attached and mounted on a node is considered to be used once, not
+       * twice. The same rule applies for a unique volume that is shared among multiple pods on the
+       * same node. If this field is nil, then the supported number of volumes on this node is
+       * unbounded.
+       */
+      count?: pulumi.Input<number>
 
     }
 

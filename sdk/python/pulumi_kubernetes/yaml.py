@@ -186,6 +186,30 @@ def _parse_yaml_object(
             lambda identifier: f"{resource_prefix}-{identifier}")
 
     gvk = f"{api_version}/{kind}"
+    if gvk == "admissionregistration.k8s.io/v1/MutatingWebhookConfiguration":
+        # Import locally to avoid name collisions.
+        from pulumi_kubernetes.admissionregistration.v1 import MutatingWebhookConfiguration
+        return [identifier.apply(
+            lambda x: (f"admissionregistration.k8s.io/v1/MutatingWebhookConfiguration:{x}",
+                       MutatingWebhookConfiguration(f"{x}", opts, **obj)))]
+    if gvk == "admissionregistration.k8s.io/v1/MutatingWebhookConfigurationList":
+        # Import locally to avoid name collisions.
+        from pulumi_kubernetes.admissionregistration.v1 import MutatingWebhookConfigurationList
+        return [identifier.apply(
+            lambda x: (f"admissionregistration.k8s.io/v1/MutatingWebhookConfigurationList:{x}",
+                       MutatingWebhookConfigurationList(f"{x}", opts, **obj)))]
+    if gvk == "admissionregistration.k8s.io/v1/ValidatingWebhookConfiguration":
+        # Import locally to avoid name collisions.
+        from pulumi_kubernetes.admissionregistration.v1 import ValidatingWebhookConfiguration
+        return [identifier.apply(
+            lambda x: (f"admissionregistration.k8s.io/v1/ValidatingWebhookConfiguration:{x}",
+                       ValidatingWebhookConfiguration(f"{x}", opts, **obj)))]
+    if gvk == "admissionregistration.k8s.io/v1/ValidatingWebhookConfigurationList":
+        # Import locally to avoid name collisions.
+        from pulumi_kubernetes.admissionregistration.v1 import ValidatingWebhookConfigurationList
+        return [identifier.apply(
+            lambda x: (f"admissionregistration.k8s.io/v1/ValidatingWebhookConfigurationList:{x}",
+                       ValidatingWebhookConfigurationList(f"{x}", opts, **obj)))]
     if gvk == "admissionregistration.k8s.io/v1beta1/MutatingWebhookConfiguration":
         # Import locally to avoid name collisions.
         from pulumi_kubernetes.admissionregistration.v1beta1 import MutatingWebhookConfiguration
@@ -414,6 +438,12 @@ def _parse_yaml_object(
         return [identifier.apply(
             lambda x: (f"auditregistration.k8s.io/v1alpha1/AuditSinkList:{x}",
                        AuditSinkList(f"{x}", opts, **obj)))]
+    if gvk == "authentication.k8s.io/v1/TokenRequest":
+        # Import locally to avoid name collisions.
+        from pulumi_kubernetes.authentication.v1 import TokenRequest
+        return [identifier.apply(
+            lambda x: (f"authentication.k8s.io/v1/TokenRequest:{x}",
+                       TokenRequest(f"{x}", opts, **obj)))]
     if gvk == "authentication.k8s.io/v1/TokenReview":
         # Import locally to avoid name collisions.
         from pulumi_kubernetes.authentication.v1 import TokenReview
